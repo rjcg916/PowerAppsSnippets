@@ -18,7 +18,7 @@ Set(
 Set(
     Trace,
     If(
-        CurrentUserDisplayName = "Bob GRAHAM",
+        CurrentUserDisplayName = "xxxx",
         false,
         false
     )
