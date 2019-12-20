@@ -1,0 +1,109 @@
+Navigate to NewItem Screen - e.g. how to intialize screen, collection, local variables
+
+NewForm('New Accrual Request_4');
+Clear(colSupportingDocs);
+Navigate(
+    'New Request Line Items',
+    ScreenTransition.None,
+    {
+        AttachmentCount: 0
+    }
+)
+
+NewItemOnVisible - set local variables based upon user type and current screen
+
+If(
+    IsBlank(Submitter),
+    Set(
+        Submitter,
+        "NonFinance"
+    )
+);
+Switch(
+    Submitter,
+    "NonFinance",
+    UpdateContext(
+        {
+            CurrentApprovalStep: "Request Created",
+            NextApprovalStep: "Awaiting AP Team Review",
+            MgrChoiceRequired: false
+        }
+    ),
+    "Finance",
+    UpdateContext(
+        {
+            CurrentApprovalStep: "Request Created",
+            NextApprovalStep: "Awaiting Management Approval",
+            MgrChoiceRequired: true
+        }
+    )
+)
+
+NewItem Button DisplayMode - enable button based upon validation tests
+
+If(And( CountRows(colSupportingDocs) > 0, AttachmentCount = 1, 
+        Comments_DataCard1_6.Valid, 
+        'Entry Date_DataCard1_6'.Valid, 
+        Or('Managerial Approver_DataCard2_6'.Valid, !MgrChoiceRequired)),
+DisplayMode.Edit, DisplayMode.Disabled)
+
+
+NewItem Button OnSelect - trigger flows and update audit trail
+
+SubmitForm([@'New Accrual Request_6']);
+UpdateContext({NewRequestID: Text('New Accrual Request_6'.LastSubmit.ID)});
+ClearCollect(
+    reqSupportingDocs,
+    ForAll(
+        colSupportingDocs,
+        {
+            title: title,
+            description: description,
+            DataStream: DataStream,
+            DocumentType: DocumentType,
+            RequestID: NewRequestID
+        }
+    )
+);
+'Portal-UploadAccrualSupportingDocuments'.Run(
+    JSON(
+        reqSupportingDocs,
+        JSONFormat.IncludeBinaryData
+    )
+);
+'Portal-ParseExcelandSaveLineItems'.Run(NewRequestID);
+Patch(
+    'Accrual Requests',
+    LookUp(
+        'Accrual Requests',
+        ID = Value(NewRequestID)
+    ),
+    {
+        Status: {
+            Value: NextApprovalStep,
+            '@odata.type': "#Microsoft.Azure.Connectors.SharePoint.SPListExpandedReference"
+        },
+        State: {
+            Value: "In Progress",
+            '@odata.type': "#Microsoft.Azure.Connectors.SharePoint.SPListExpandedReference"
+        }
+    }
+);
+Patch(
+    'Accrual Requests History',
+    Defaults('Accrual Requests History'),
+    {
+        Title: Coalesce("New Request"),
+        RequestID:Value(NewRequestID),
+        ActionBy: CurrentUserDisplayName,
+        ActionDept: CurrentUserDepartment,
+        StartStatus: CurrentApprovalStep,
+        NewStatus: NextApprovalStep
+    }
+);
+ResetForm('New Accrual Request_6');
+If (
+    !Back(),
+    Navigate([@'My Requests Line Items'])
+)
+
