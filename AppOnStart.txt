@@ -1,0 +1,238 @@
+ClearCollect(
+    ccTabNames,
+    {Tab: "Request", Role:""},
+    {Tab: "Supporting Documents", Role: ""},
+    {Tab: "Line Items", Role: ""},
+    {Tab: "Update All Line Items", Role: "ReviewAllowed"},
+    {Tab: "Review History", Role: ""}
+);
+Clear(colSupportingDocs);
+Set(
+    CurrentUserDisplayName,
+    Office365Users.MyProfileV2().displayName
+);
+Set(
+    CurrentUserDepartment,
+    Office365Users.MyProfileV2().department
+);
+Set(
+    Trace,
+    If(
+        CurrentUserDisplayName = "Bob GRAHAM",
+        false,
+        false
+    )
+);
+Set(
+    isAPApprover,
+    LookUp(
+        'AP Approvers',
+        ApproverName.DisplayName = CurrentUserDisplayName,
+        true
+    )
+);
+Set(
+    isMgrApprover,
+    LookUp(
+        'Managerial Approvers',
+        Manager.DisplayName = CurrentUserDisplayName,
+        true
+    )
+);
+Set(
+    isGLApprover,
+    LookUp(
+        'GL Approvers',
+        ApproverName.DisplayName = CurrentUserDisplayName,
+        true
+    )
+);
+If(
+    !IsBlank(Param("RequestID")),
+    Set(
+        ParamRequestID,
+        Param("RequestID")
+    ),
+    Set(
+        ParamRequestID,
+        "0"
+    )
+);
+If(
+    StartsWith(
+        Lower(Trim(CurrentUserDepartment)),
+        "finance"
+    ),
+    Set(
+        Submitter,
+        "Finance"
+    ),
+    Set(
+        Submitter,
+        "NonFinance"
+    )
+);
+Switch(
+    Param("Action"),
+    "MyRequestsLineItems",
+    Navigate(
+        [@'My Requests Line Items'],
+        None
+    ),
+    "NewRequest",
+    Navigate(
+        'New Request',
+        None,
+        {AttachmentCount: 0}
+    ),
+    "NewRequestLineItems",
+    Navigate(
+        [@'New Request Line Items'],
+        None,
+        {AttachmentCount: 0}
+    ),
+    "ViewRequest",
+    Navigate(
+        'Review Request',
+        None,
+        {ReviewRequestID: ParamRequestID}
+    ),
+    "ViewRequestLineItems",
+    Navigate(
+        'Review Request Line Items Tabbed',
+        None,
+        {ReviewRequestID: ParamRequestID}
+    ),
+    "EditRequest",
+    If(
+        IsBlank(
+            LookUp(
+                'Accrual Requests',
+                ID = Value(ParamRequestID),
+                ID
+            )
+        ),
+        Navigate(Error),
+        Navigate(
+            'Edit Request',
+            None,
+            {
+                EditRequestID: ParamRequestID,
+                AttachmentCount: 1,
+                retainSupportingDocs: true
+            }
+        )
+    ),
+    "EditRequestLineItems",
+    If(
+        IsBlank(
+            LookUp(
+                'Accrual Requests',
+                ID = Value(ParamRequestID),
+                ID
+            )
+        ),
+        Navigate('Error Line Items'),
+        Navigate(
+            [@'Edit Request Line Items'],
+            None,
+            {
+                EditRequestID: ParamRequestID,
+                AttachmentCount: 1,
+                retainSupportingDocs: true
+            }
+        )
+    ),
+    "ReviewRequest",
+    If(
+        IsBlank(
+            LookUp(
+                'Accrual Requests',
+                ID = Value(ParamRequestID),
+                ID
+            )
+        ),
+        Navigate(Error),
+        Navigate(
+            'Review Request',
+            None,
+            {ReviewRequestID: ParamRequestID}
+        )
+    ),
+    "ReviewRequestLineItems",
+    If(
+        IsBlank(
+            LookUp(
+                'Accrual Requests',
+                ID = Value(ParamRequestID),
+                ID
+            )
+        ),
+        Navigate('Error Line Items'),
+        Navigate(
+            [@'Review Request Line Items Tabbed'],
+            None,
+            {
+                ReviewRequestID: ParamRequestID,
+                vvTabSelected: "Request"
+            }
+        )
+    ),
+    "ListRequests",
+    Navigate(
+        [@'List Requests'],
+        None,
+        Switch(
+            Param("DefaultView"),
+            "AP",
+            {DefaultView: "AP"},
+            "Mgt",
+            {DefaultView: "Mgt"},
+            "GL",
+            {DefaultView: "GL"},
+            {DefaultView: "AP"}
+        )
+    ),
+    "ListRequestsAP",
+    Navigate(
+        'List Requests',
+        None,
+        {DefaultView: "AP"}
+    ),
+    "ListRequestsMgt",
+    Navigate(
+        'List Requests',
+        None,
+        {DefaultView: "Mgt"}
+    ),
+    "ListRequestsGL",
+    Navigate(
+        'List Requests',
+        None,
+        {DefaultView: "GL"}
+    ),
+    "ListRequestsLineItems",
+    Navigate(
+        [@'List Requests Line Items'],
+        None,
+        Switch(
+            Param("DefaultView"),
+            "AP",
+            {DefaultView: "AP"},
+            "Mgt",
+            {DefaultView: "Mgt"},
+            "GL",
+            {DefaultView: "GL"},
+            {DefaultView: "AP"}
+        )
+    ),
+    "Testing",
+    Navigate(
+        Testing,
+        None
+    )
+);
+Set(
+    ParamRequestID,
+    "0"
+);
