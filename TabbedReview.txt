@@ -1,0 +1,106 @@
+invoke tabbed form
+UpdateContext({SelectedRequestID: Text('Request List_1'.Selected.ID)});
+If(
+    'Request List_1'.Selected.Status.Value = "Draft",
+    EditForm('New Accrual Request_5');
+    Clear(colSupportingDocs);
+    Navigate(
+        [@'Edit Request Line Items'],
+        ScreenTransition.None,
+        {
+            EditRequestID: SelectedRequestID,
+            AttachmentCount: 1,
+            retainSupportingDocs: true
+        }
+    ),
+    Navigate(
+        [@'Review Request Line Items Tabbed'],
+        ScreenTransition.None,
+        {
+            ReviewRequestID: SelectedRequestID,
+            vvTabSelected: "Request"
+        }
+    )
+)
+
+onvisible for form
+UpdateContext (
+    {
+        reviewRequest: LookUp(
+            'Accrual Requests',
+            ID = Value(ReviewRequestID)
+        )
+    }
+);
+UpdateContext(
+    {
+        currentState: reviewRequest.State.Value,
+        currentStatus: reviewRequest.Status.Value,
+        currentMgr: reviewRequest.ManagerialApprover.Value
+    }
+);
+Switch(
+    currentStatus,
+    "Awaiting AP Team Review",
+    UpdateContext(
+        {
+            NextApprovalStep: "Awaiting Management Approval",
+            NextRejectionStep: "Rejected by AP Team",
+            MgrChoiceRequired: true,
+            isUserApprover: isAPApprover,
+            commentLabel: "AP"
+        }
+    ),
+    "Awaiting Management Approval",
+    UpdateContext(
+        {
+            NextApprovalStep: "Awaiting GL Team Approval",
+            NextRejectionStep: "Rejected by Management",
+            MgrChoiceRequired: false,
+            isUserApprover: isMgrApprover,
+            commentLabel: "Mgr"
+        }
+    ),
+    "Awaiting GL Team Approval",
+    UpdateContext(
+        {
+            NextApprovalStep: "Approved",
+            NextRejectionStep: "Rejected by GL Team",
+            MgrChoiceRequired: false,
+            isUserApprover: isGLApprover,
+            commentLabel: "GL"
+        }
+    ),
+    UpdateContext(
+        {
+            NextApprovalStep: "None",
+            NextRejectionStep: "None",
+            MgrChoiceRequired: false,
+            isUserApprover: false,
+            commentLabel: ""
+        }
+    )
+);
+UpdateContext(
+    {
+        reviewAllowed: (CurrentUserDisplayName <> LookUp(
+            'Accrual Requests',
+            ID = Value(ReviewRequestID),
+            'Created By'.DisplayName
+        ) || currentStatus = "Awaiting GL Team Approval" || CurrentUserDisplayName = "Bob GRAHAM") && currentState = "In Progress" && isUserApprover
+    }
+);
+Reset(Comments_2);
+
+tab gallery items
+
+Filter(
+    ccTabNames,
+    Role = "" || (Role = "ReviewAllowed") && reviewAllowed
+)
+
+tab gallery onselect
+UpdateContext({vvTabSelected: ThisItem.Tab})
+
+Request group on screen visible 
+vvTabSelected="Request"
