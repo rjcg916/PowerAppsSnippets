@@ -1,0 +1,19 @@
+OnSelect of Data Column in Grid
+
+If(
+    reviewAllowed,
+    Navigate(
+        [@'Line Item Editor'],
+        None,
+        {
+            EditRequestID: ReviewRequestID,
+            CurrentItem: 'Line Item Data Table_1'.Selected
+        }
+    )
+)
+
+Line Item Editor - DataSource
+'Accrual Request List Items'
+
+LineItem Editor - Item
+CurrentItem
