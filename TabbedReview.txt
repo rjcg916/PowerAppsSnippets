@@ -87,7 +87,7 @@ UpdateContext(
             'Accrual Requests',
             ID = Value(ReviewRequestID),
             'Created By'.DisplayName
-        ) || currentStatus = "Awaiting GL Team Approval" || CurrentUserDisplayName = "Bob GRAHAM") && currentState = "In Progress" && isUserApprover
+        ) || currentStatus = "Awaiting GL Team Approval" || CurrentUserDisplayName = "xxx") && currentState = "In Progress" && isUserApprover
     }
 );
 Reset(Comments_2);
